@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    
+    <title>Mafioznik Radio | AI Future</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #fd429c;
+            --secondary: #6e45e2;
+            --accent: #2ecc71;
+            --bg: #050507;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --text-main: #ffffff;
+            --text-muted: #888888;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #1a1a2e, #000);
+        }
+
+        /* Динамический фон */
+        .ambient-bg {
+            position: absolute;
+            width: 150vw;
+            height: 150vh;
+            background: radial-gradient(circle, rgba(253,66,156,0.15) 0%, rgba(0,0,0,0) 60%);
+            top: -25%;
+            left: -25%;
+            animation: moveBg 15s infinite alternate ease-in-out;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .ambient-bg:nth-child(2) {
+            background: radial-gradient(circle, rgba(110,69,226,0.15) 0%, rgba(0,0,0,0) 60%);
+            top: auto; bottom: -25%; left: auto; right: -25%;
+            animation-delay: -7s;
+        }
+
+        @keyframes moveBg {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        /* Контейнер плеера */
+        .player-card {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 420px;
+            height: 100%;
+            max-height: 850px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: height 0.3s;
+        }
+
+        @media (min-width: 500px) {
+            .player-card {
+                height: 90vh;
+                border-radius: 40px;
+            }
+        }
+
+        /* Шапка */
+        .header {
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, #bbb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .online-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--accent);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent);
+            animation: blink 2s infinite;
+        }
+
+        /* Обложка */
+        .cover-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            perspective: 1000px;
+            padding: 20px;
+        }
+
+        .cover-img {
+            width: 280px;
+            height: 280px;
+            border-radius: 30px;
+            object-fit: cover;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 2;
+        }
+
+        .cover-glow {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            background: var(--primary);
+            filter: blur(60px);
+            opacity: 0.3;
+            z-index: 1;
+            transition: opacity 0.5s;
+        }
+
+        /* Анимация при игре */
+        .is-playing .cover-img {
+            transform: scale(1.05) translateY(-10px);
+            box-shadow: 0 30px 60px rgba(253, 66, 156, 0.25);
+        }
+        .is-playing .cover-glow {
+            opacity: 0.6;
+            animation: glowPulse 4s infinite alternate;
+        }
+
+        @keyframes glowPulse {
+            0% { opacity: 0.4; transform: scale(0.9); }
+            100% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        /* Инфо о треке */
+        .info-area {
+            text-align: center;
+            padding: 0 25px;
+            margin-bottom: 10px;
+        }
+
+        .track-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .track-artist {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Визуализатор */
+        .visualizer {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 4px;
+            height: 30px;
+            margin: 20px 0;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        .is-playing .visualizer { opacity: 1; }
+
+        .bar {
+            width: 4px;
+            background: var(--text-main);
+            border-radius: 2px;
+            height: 4px;
+            transition: height 0.1s ease;
+        }
+
+        /* Контролы */
+        .controls-area {
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-top: 1px solid var(--glass-border);
+            border-radius: 0 0 40px 40px; /* Только для десктопа */
+        }
+
+        /* MEDIA QUERY: Настройки для мобильных */
+        @media (max-width: 500px) {
+            .controls-area { border-radius: 0; padding-bottom: 50px; }
+            
+            /* Скрываем ползунок громкости на мобильных */
+            .volume-wrapper {
+                display: none !important;
+            }
+        }
+
+        .main-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            padding: 10px;
+        }
+        .btn-icon:hover { color: #fff; }
+
+        .play-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            background: var(--primary);
+            background: linear-gradient(135deg, #fd429c, #6e45e2);
+            border: none;
+            color: white;
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(253, 66, 156, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .play-btn:active { transform: scale(0.92); }
+        .play-btn:hover { box-shadow: 0 15px 40px rgba(253, 66, 156, 0.6); }
+
+        /* Слайдер громкости */
+        .volume-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.05);
+            padding: 12px 20px;
+            border-radius: 15px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+    <div class="ambient-bg"></div>
+
+    <div class="player-card" id="card">
+        
+        <div class="header">
+            <div class="brand">MAFIA.RADIO</div>
+            <div class="online-badge">
+                <div class="dot"></div>
+                <span id="onlineCount">Loading...</span>
+            </div>
+        </div>
+
+        <div class="cover-wrapper">
+            <div class="cover-glow"></div>
+            <img src="favicon.png" class="cover-img" id="cover" alt="Art">
+        </div>
+
+        <div class="info-area">
+            <div class="track-title" id="title">AI Stream</div>
+            <div class="track-artist">Mafioznik FM</div>
+            
+            <div class="visualizer" id="visualizer">
+            </div>
+        </div>
+
+        <div class="controls-area">
+            <div class="main-controls">
+                <button class="btn-icon"><i class="fas fa-random"></i></button>
+                <button class="play-btn" id="playBtn">
+                    <i class="fas fa-play" id="playIcon"></i>
+                </button>
+                <button class="btn-icon"><i class="fas fa-share-alt"></i></button>
+            </div>
+
+            <div class="volume-wrapper">
+                <i class="fas fa-volume-down" style="color:var(--text-muted); font-size:12px;"></i>
+                <input type="range" min="0" max="1" step="0.01" value="0.5" id="vol">
+                <i class="fas fa-volume-up" style="color:var(--text-muted); font-size:12px;"></i>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio" preload="none"></audio>
+
+    <script>
+        async function updateOnlineCounter() {
+			try {
+				const response = await fetch('/api/heartbeat', { 
+					method: 'POST', 
+					cache: 'no-cache' 
+				});
+				
+				if (response.ok) {
+					const data = await response.json();
+					const el = document.getElementById('onlineCount');
+					if (el) {
+                        // Изменен формат вывода
+						el.innerText = "Online: " + data.online;
+					}
+				}
+			} catch (error) {
+				console.error("Ошибка счетчика:", error);
+			}
+		}
+        updateOnlineCounter();
+		
+		setInterval(updateOnlineCounter, 5000);
+
+        const card = document.getElementById('card');
+        const audio = document.getElementById('audio');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const volSlider = document.getElementById('vol');
+        const titleEl = document.getElementById('title');
+        const coverEl = document.getElementById('cover');
+        const vizContainer = document.getElementById('visualizer');
+
+        const bars = [];
+        for(let i=0; i<20; i++) {
+            const b = document.createElement('div');
+            b.className = 'bar';
+            vizContainer.appendChild(b);
+            bars.push(b);
+        }
+
+        let isPlaying = false;
+        let isConnecting = false;
+
+        const savedVol = localStorage.getItem('radioVol');
+        if(savedVol) { audio.volume = savedVol; volSlider.value = savedVol; }
+        else { audio.volume = 0.5; }
+
+        volSlider.oninput = (e) => {
+            audio.volume = e.target.value;
+            localStorage.setItem('radioVol', e.target.value);
+        };
+
+        playBtn.onclick = () => {
+            if(isPlaying) stopRadio(); else startRadio();
+        };
+
+        function startRadio() {
+            if(isConnecting) return;
+            isConnecting = true;
+            playIcon.className = 'fas fa-spinner fa-spin';
+            titleEl.innerText = "Connecting...";
+            
+            audio.src = "/stream?t=" + Date.now();
+            audio.play().then(() => {
+                isConnecting = false;
+                isPlaying = true;
+                playIcon.className = 'fas fa-pause';
+                card.classList.add('is-playing');
+                updateMetadata();
+                loopVisualizer();
+            }).catch(e => {
+                console.error(e);
+                stopRadio();
+            });
+        }
+
+        function stopRadio() {
+            audio.pause();
+            audio.src = "";
+            isPlaying = false;
+            isConnecting = false;
+            playIcon.className = 'fas fa-play';
+            card.classList.remove('is-playing');
+            titleEl.innerText = "Paused";
+            resetVisualizer();
+        }
+
+        audio.onended = () => isPlaying && setTimeout(startRadio, 1000);
+        audio.onerror = () => isPlaying && setTimeout(startRadio, 2000);
+
+        async function updateMetadata() {
+            if(!isPlaying) return;
+            try {
+                const r = await fetch('now_playing.json?t=' + Date.now());
+                if(r.ok) {
+                    const d = await r.json();
+                    if(titleEl.innerText !== d.title) {
+                        titleEl.innerText = d.title;
+                        coverEl.src = d.image || 'favicon.png';
+                        document.title = "▶ " + d.title;
+                        
+                        if('mediaSession' in navigator) {
+                            navigator.mediaSession.metadata = new MediaMetadata({
+                                title: d.title,
+                                artist: "Mafioznik Radio",
+                                artwork: [{ src: coverEl.src, sizes: "512x512", type: "image/jpeg" }]
+                            });
+                        }
+                    }
+                }
+            } catch {}
+            setTimeout(updateMetadata, 3000);
+        }
+
+        function loopVisualizer() {
+            if(!isPlaying) return;
+            bars.forEach(b => {
+                const h = Math.floor(Math.random() * 90 + 10);
+                b.style.height = h + '%';
+            });
+            setTimeout(loopVisualizer, 100);
+        }
+
+        function resetVisualizer() {
+            bars.forEach(b => b.style.height = '4px');
+        }
+
+        if('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', startRadio);
+            navigator.mediaSession.setActionHandler('pause', stopRadio);
+        }
+    </script>
+</body>
+</html>

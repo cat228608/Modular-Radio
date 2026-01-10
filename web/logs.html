@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM TERMINAL</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Monospace Font -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #0c0c0c;
+            --term-bg: #111;
+            --text: #a9b7c6;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --yellow: #f1c40f;
+            --blue: #3498db;
+            --purple: #9b59b6;
+            --border: #333;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* CRT Effect Overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* Header */
+        .header {
+            height: 50px;
+            background: #1a1a1a;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+
+        .status-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            background: #555;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        .led.on {
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        .btn-scroll {
+            background: transparent;
+            border: 1px solid #444;
+            color: #666;
+            padding: 5px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .btn-scroll.active {
+            border-color: var(--green);
+            color: var(--green);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        /* Terminal Window */
+        .terminal-window {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar */
+        .terminal-window::-webkit-scrollbar { width: 8px; }
+        .terminal-window::-webkit-scrollbar-track { background: var(--bg); }
+        .terminal-window::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .terminal-window::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Log Lines */
+        .log-entry {
+            display: flex;
+            margin-bottom: 4px;
+            opacity: 0.9;
+        }
+        .log-entry:hover { background: rgba(255,255,255,0.03); opacity: 1; }
+        
+        .ts { color: #555; margin-right: 15px; user-select: none; min-width: 80px; }
+        .msg { white-space: pre-wrap; word-break: break-all; }
+
+        /* Colors */
+        .l-err .msg { color: var(--red); font-weight: bold; }
+        .l-warn .msg { color: var(--yellow); }
+        .l-ok .msg { color: var(--green); }
+        .l-sys .msg { color: var(--blue); font-weight: bold; }
+        .l-mus .msg { color: var(--purple); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="status-block">
+            <div class="led" id="led"></div>
+            <span>ROOT@RADIO-SERVER:~# tail -f logs.txt</span>
+        </div>
+        <div>
+            <span id="last-ping" style="font-size:11px; color:#555; margin-right:15px;">WAITING</span>
+            <button class="btn-scroll active" id="btnScroll" onclick="toggleScroll()">AUTO_SCROLL: ON</button>
+        </div>
+    </div>
+
+    <div class="terminal-window" id="console">
+        <div style="color:#444; text-align:center; margin-top:100px;">
+            > INITIALIZING CONNECTION TO ORCHESTRATOR...<br>
+            > ESTABLISHING SECURE TUNNEL...
+        </div>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const led = document.getElementById('led');
+        const lastPingEl = document.getElementById('last-ping');
+        const btnScroll = document.getElementById('btnScroll');
+
+        let autoScroll = true;
+        let lastContent = "";
+
+        function toggleScroll() {
+            autoScroll = !autoScroll;
+            btnScroll.classList.toggle('active');
+            btnScroll.innerText = autoScroll ? "AUTO_SCROLL: ON" : "AUTO_SCROLL: PAUSED";
+            if(autoScroll) scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        // Детекция ручного скролла
+        consoleDiv.addEventListener('scroll', () => {
+            const isBottom = consoleDiv.scrollHeight - consoleDiv.scrollTop - consoleDiv.clientHeight < 50;
+            if (!isBottom && autoScroll) {
+                // Если юзер скроллит вверх, можно бы выключить автоскролл, 
+                // но в хакерском стиле лучше оставить кнопку для явного контроля.
+            }
+        });
+
+        function parseLog(line) {
+            if(!line.trim()) return null;
+            
+            // Парсинг времени [20:00:00]
+            const timeMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]/);
+            const ts = timeMatch ? timeMatch[1] : "--:--:--";
+            let msg = timeMatch ? line.substring(10).trim() : line;
+
+            // Определение типа
+            let type = "l-def";
+            if(line.includes("❌") || line.includes("Error")) type = "l-err";
+            else if(line.includes("⚠️")) type = "l-warn";
+            else if(line.includes("✅")) type = "l-ok";
+            else if(line.includes("🚀")) type = "l-sys";
+            else if(line.includes("🎙️") || line.includes("Music")) type = "l-mus";
+
+            return `<div class="log-entry ${type}">
+                <div class="ts">${ts}</div>
+                <div class="msg">${msg}</div>
+            </div>`;
+        }
+
+        async function updateLogs() {
+            try {
+                const r = await fetch('logs.txt?t=' + Date.now());
+                if(!r.ok) throw new Error("No signal");
+                
+                const text = await r.text();
+                if(text !== lastContent) {
+                    lastContent = text;
+                    const lines = text.split('\n');
+                    // Берем последние 200 строк чтобы не грузить DOM
+                    const recent = lines.slice(-200); 
+                    
+                    consoleDiv.innerHTML = recent.map(parseLog).join('');
+                    
+                    if(autoScroll) scrollToBottom();
+                    led.classList.add('on');
+                    lastPingEl.innerText = "DATA RX: " + new Date().toLocaleTimeString();
+                }
+            } catch (e) {
+                led.classList.remove('on');
+                lastPingEl.innerText = "CONNECTION LOST";
+            }
+        }
+
+        setInterval(updateLogs, 2000);
+        updateLogs();
+    </script>
+</body>
+</html>

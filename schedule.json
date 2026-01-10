@@ -1,0 +1,20 @@
+[
+  {
+    "mode": "intro",
+    "type": "dj"
+  },
+  {
+    "type": "music"
+  },
+  {
+    "mode": "outro",
+    "type": "dj"
+  },
+  {
+    "type": "music"
+  },
+  {
+    "mode": "intro",
+    "type": "dj"
+  }
+]
